@@ -14,3 +14,12 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+# C++ files (download them from the offcial github)
+godot-cpp
+
+# SCons build files
+.sconsign.dblite
+
+# IDEs
+.vscode
