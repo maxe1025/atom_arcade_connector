@@ -6,4 +6,4 @@ reloadable = true
 
 [libraries]
 
-windows.debug.x86_64 = "res://bin/connector.windows.template_debug.x86_64.dll"
+windows.debug.x86_64 = "bin/connector.windows.template_debug.x86_64.dll"
