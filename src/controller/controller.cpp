@@ -9,6 +9,9 @@
     #include <termios.h>
 #endif
 
+/*
+ * Register Godot-exposed methods
+ */
 void Controller::_bind_methods() {
     ClassDB::bind_method(D_METHOD("start", "port"), &Controller::start);
     ClassDB::bind_method(D_METHOD("stop"), &Controller::stop);
@@ -20,12 +23,13 @@ void Controller::_bind_methods() {
 
 Controller::Controller() {
     running = false;
+
     axis_x = 512;
     axis_y = 512;
     buttons = 0;
 
     #ifdef _WIN32
-        serial_handle = nullptr;
+        serial_handle = INVALID_HANDLE_VALUE;
     #else
         serial_fd = -1;
     #endif
@@ -36,6 +40,9 @@ Controller::~Controller() {
     stop();
 }
 
+/*
+ * Opens the serial port and starts the reading thread.
+ */
 bool Controller::start(const String &port) {
     if (running)
         return true;
@@ -102,6 +109,9 @@ bool Controller::start(const String &port) {
     return true;
 }
 
+/*
+ * Stops the serial thread and closes the port.
+ */
 void Controller::stop() {
     running = false;
 
@@ -118,6 +128,16 @@ void Controller::stop() {
 #endif
 }
 
+/*
+ * Background thread: reads 6-byte binary packets.
+ * Packet format:
+ * [0] X low byte
+ * [1] X high byte
+ * [2] Y low byte
+ * [3] Y high byte
+ * [4] Button bitmask
+ * [5] Unused/reserved
+ */
 void Controller::read_loop() {
     uint8_t packet[6];
 
@@ -144,6 +164,7 @@ void Controller::read_loop() {
         uint8_t yh = packet[3];
         uint8_t btns = packet[4];
 
+        // Convert binary values to integers
         axis_x = xl | (xh << 8);
         axis_y = yl | (yh << 8);
         buttons = btns;

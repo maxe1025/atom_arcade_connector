@@ -34,8 +34,8 @@ public:
     Controller();
     ~Controller();
 
-    bool start(const String &port = "/dev/ttyACM0");
-    void stop();
+    bool start(const String &port = "/dev/ttyACM0");    // Start serial reading
+    void stop();                                        // Stop and close port
 
     int get_axis_x() const { return axis_x.load(); }
     int get_axis_y() const { return axis_y.load(); }
