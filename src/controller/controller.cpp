@@ -153,9 +153,9 @@ void Controller::read_loop()
     while (running)
     {
 
-        // --------------------------------------------------
-        // 1. Warten auf das Startbyte 0xAA
-        // --------------------------------------------------
+        /*
+         * Wait for packet header 0xAA
+        */
         bool got_header = false;
         while (!got_header && running)
         {
@@ -186,9 +186,9 @@ void Controller::read_loop()
         if (!running)
             break;
 
-        // --------------------------------------------------
-        // 2. Die nächsten 5 Bytes einlesen (XL, XH, YL, YH, BTN)
-        // --------------------------------------------------
+        /*
+         * Read the 5 data bytes (XL, XH, YL, YH, BTN)
+        */
         int received = 0;
         while (received < 5 && running)
         {
