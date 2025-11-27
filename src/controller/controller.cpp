@@ -2,17 +2,18 @@
 #include <godot_cpp/classes/engine.hpp>
 
 #ifdef _WIN32
-    #include <windows.h>
+#include <windows.h>
 #else
-    #include <fcntl.h>
-    #include <unistd.h>
-    #include <termios.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
 #endif
 
 /*
  * Register Godot-exposed methods
  */
-void Controller::_bind_methods() {
+void Controller::_bind_methods()
+{
     ClassDB::bind_method(D_METHOD("start", "port"), &Controller::start);
     ClassDB::bind_method(D_METHOD("stop"), &Controller::stop);
 
@@ -21,29 +22,31 @@ void Controller::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_buttons"), &Controller::get_buttons);
 }
 
-Controller::Controller() {
+Controller::Controller()
+{
     running = false;
 
     axis_x = 512;
     axis_y = 512;
     buttons = 0;
 
-    #ifdef _WIN32
-        serial_handle = INVALID_HANDLE_VALUE;
-    #else
-        serial_fd = -1;
-    #endif
-
+#ifdef _WIN32
+    serial_handle = INVALID_HANDLE_VALUE;
+#else
+    serial_fd = -1;
+#endif
 }
 
-Controller::~Controller() {
+Controller::~Controller()
+{
     stop();
 }
 
 /*
  * Opens the serial port and starts the reading thread.
  */
-bool Controller::start(const String &port) {
+bool Controller::start(const String &port)
+{
     if (running)
         return true;
 
@@ -55,10 +58,10 @@ bool Controller::start(const String &port) {
         NULL,
         OPEN_EXISTING,
         0,
-        NULL
-    );
+        NULL);
 
-    if (serial_handle == INVALID_HANDLE_VALUE) {
+    if (serial_handle == INVALID_HANDLE_VALUE)
+    {
         ERR_PRINT("Failed to open COM port");
         return false;
     }
@@ -69,7 +72,7 @@ bool Controller::start(const String &port) {
 
     dcbSerialParams.BaudRate = CBR_115200;
     dcbSerialParams.ByteSize = 8;
-    dcbSerialParams.Parity   = NOPARITY;
+    dcbSerialParams.Parity = NOPARITY;
     dcbSerialParams.StopBits = ONESTOPBIT;
 
     SetCommState(serial_handle, &dcbSerialParams);
@@ -80,7 +83,8 @@ bool Controller::start(const String &port) {
 
 #else
     serial_fd = open(port.utf8().get_data(), O_RDONLY | O_NOCTTY | O_NONBLOCK);
-    if (serial_fd < 0) {
+    if (serial_fd < 0)
+    {
         ERR_PRINT("Failed to open serial port");
         return false;
     }
@@ -112,16 +116,19 @@ bool Controller::start(const String &port) {
 /*
  * Stops the serial thread and closes the port.
  */
-void Controller::stop() {
+void Controller::stop()
+{
     running = false;
 
 #ifdef _WIN32
-    if (serial_handle != INVALID_HANDLE_VALUE) {
+    if (serial_handle != INVALID_HANDLE_VALUE)
+    {
         CloseHandle(serial_handle);
         serial_handle = INVALID_HANDLE_VALUE;
     }
 #else
-    if (serial_fd >= 0) {
+    if (serial_fd >= 0)
+    {
         close(serial_fd);
         serial_fd = -1;
     }
@@ -138,35 +145,88 @@ void Controller::stop() {
  * [4] Button bitmask
  * [5] Unused/reserved
  */
-void Controller::read_loop() {
-    uint8_t packet[6];
+void Controller::read_loop()
+{
+    uint8_t header = 0;
+    uint8_t data[5];
 
-    while (running) {
+    while (running)
+    {
 
+        // --------------------------------------------------
+        // 1. Warten auf das Startbyte 0xAA
+        // --------------------------------------------------
+        bool got_header = false;
+        while (!got_header && running)
+        {
 #ifdef _WIN32
-        DWORD bytes_read = 0;
-        ReadFile(serial_handle, packet, 6, &bytes_read, NULL);
-        if (bytes_read != 6) {
-            Sleep(1);
-            continue;
-        }
+            DWORD br = 0;
+            ReadFile(serial_handle, &header, 1, &br, NULL);
+            if (br == 1 && header == 0xAA)
+            {
+                got_header = true;
+            }
+            else
+            {
+                Sleep(1);
+            }
 #else
-        int r = read(serial_fd, packet, 6);
-        if (r != 6) {
-            usleep(1000);
-            continue;
-        }
+            int r = read(serial_fd, &header, 1);
+            if (r == 1 && header == 0xAA)
+            {
+                got_header = true;
+            }
+            else
+            {
+                usleep(1000);
+            }
 #endif
+        }
 
-        uint8_t xl = packet[0];
-        uint8_t xh = packet[1];
-        uint8_t yl = packet[2];
-        uint8_t yh = packet[3];
-        uint8_t btns = packet[4];
+        if (!running)
+            break;
 
-        // Convert binary values to integers
+        // --------------------------------------------------
+        // 2. Die nächsten 5 Bytes einlesen (XL, XH, YL, YH, BTN)
+        // --------------------------------------------------
+        int received = 0;
+        while (received < 5 && running)
+        {
+#ifdef _WIN32
+            DWORD br = 0;
+            ReadFile(serial_handle, data + received, 5 - received, &br, NULL);
+            if (br > 0)
+            {
+                received += br;
+            }
+            else
+            {
+                Sleep(1);
+            }
+#else
+            int r = read(serial_fd, data + received, 5 - received);
+            if (r > 0)
+            {
+                received += r;
+            }
+            else
+            {
+                usleep(1000);
+            }
+#endif
+        }
+
+        if (!running)
+            break;
+
+        uint8_t xl = data[0];
+        uint8_t xh = data[1];
+        uint8_t yl = data[2];
+        uint8_t yh = data[3];
+        uint8_t btn = data[4];
+
         axis_x = xl | (xh << 8);
         axis_y = yl | (yh << 8);
-        buttons = btns;
+        buttons = btn;
     }
 }
