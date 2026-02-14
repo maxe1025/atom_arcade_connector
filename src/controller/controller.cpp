@@ -148,7 +148,7 @@ void Controller::stop()
 void Controller::read_loop()
 {
     uint8_t header = 0;
-    uint8_t data[5];
+    uint8_t data[6];
 
     while (running)
     {
@@ -187,14 +187,14 @@ void Controller::read_loop()
             break;
 
         /*
-         * Read the 5 data bytes (XL, XH, YL, YH, BTN)
+         * Read the 6 data bytes (XL, XH, YL, YH, BTN, CHECKSUM)
         */
         int received = 0;
-        while (received < 5 && running)
+        while (received < 6 && running)
         {
 #ifdef _WIN32
             DWORD br = 0;
-            ReadFile(serial_handle, data + received, 5 - received, &br, NULL);
+            ReadFile(serial_handle, data + received, 6 - received, &br, NULL);
             if (br > 0)
             {
                 received += br;
@@ -204,7 +204,7 @@ void Controller::read_loop()
                 Sleep(1);
             }
 #else
-            int r = read(serial_fd, data + received, 5 - received);
+            int r = read(serial_fd, data + received, 6 - received);
             if (r > 0)
             {
                 received += r;
@@ -224,6 +224,13 @@ void Controller::read_loop()
         uint8_t yl = data[2];
         uint8_t yh = data[3];
         uint8_t btn = data[4];
+        uint8_t checksum = data[5];
+        uint8_t calculated = (xl + xh + yl + yh + btn) & 0xFF;
+
+        if (calculated != checksum)
+        {
+            continue;
+        }
 
         axis_x = xl | (xh << 8);
         axis_y = yl | (yh << 8);
