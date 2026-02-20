@@ -4,8 +4,8 @@
 
 // Config for Arduino Mega. Chnage for UNO!!!
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW
-#define MAX_DEVICES 4
-#define CS_PIN 53
+#define MAX_DEVICES 8
+#define CS_PIN 10
 
 MD_Parola display = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
 
