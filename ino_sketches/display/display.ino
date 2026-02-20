@@ -8,12 +8,12 @@ Arduino Uno → MAX7219
 ──────────────────────
 5V   → VCC
 GND  → GND
-D11  → DIN  (MOSI)
-D13  → CLK  (SCK)
-D10  → CS   (SS)
+D11  → DIN
+D13  → CLK
+D10  → CS
 */
 
-// Config for Arduino Mega. Chnage for UNO!!!
+// Config for Arduino Uno. Chnage for other versions of the board!!!
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW
 #define MAX_DEVICES 8
 #define CS_PIN 10
@@ -24,6 +24,8 @@ const uint8_t CMD_HEADER = 0xBB;
 const uint8_t CMD_SHOW_TEXT = 0x01;
 const uint8_t CMD_CLEAR = 0x02;
 const uint8_t CMD_SET_BRIGHTNESS = 0x03;
+
+const int MAX_STATIC_CHARS = 10;
 
 uint8_t buffer[256];
 int bufferIndex = 0;
@@ -50,7 +52,6 @@ void loop() {
 }
 
 /*
- * Process incoming serial data
  * Packet format: [HEADER][COMMAND][LENGTH][DATA][CHECKSUM]
  */
 void processSerialData() {
@@ -94,9 +95,6 @@ void processSerialData() {
   }
 }
 
-/*
- * Execute display commands
- */
 void executeCommand(uint8_t command, uint8_t* data, uint8_t length) {
   switch (command) {
     case CMD_SHOW_TEXT: {
@@ -104,8 +102,14 @@ void executeCommand(uint8_t command, uint8_t* data, uint8_t length) {
       memcpy(text, data, length);
       text[length] = '\0';
       
-      display.displayClear();
-      display.print(text);
+      if (length <= MAX_STATIC_CHARS) {
+        display.displayClear();
+        display.print(text);
+      } else {
+        display.displayClear();
+        display.displayScroll(text, PA_CENTER, PA_SCROLL_RIGHT, 50);
+      }
+      
       break;
     }
     
