@@ -2,6 +2,17 @@
 #include <MD_MAX72xx.h>
 #include <SPI.h>
 
+/* Pin configuration
+
+Arduino Uno → MAX7219
+──────────────────────
+5V   → VCC
+GND  → GND
+D11  → DIN  (MOSI)
+D13  → CLK  (SCK)
+D10  → CS   (SS)
+*/
+
 // Config for Arduino Mega. Chnage for UNO!!!
 #define HARDWARE_TYPE MD_MAX72XX::FC16_HW
 #define MAX_DEVICES 8
@@ -34,6 +45,8 @@ void loop() {
   if (Serial.available() > 0) {
     processSerialData();
   }
+
+  display.displayAnimate();
 }
 
 /*
@@ -92,7 +105,7 @@ void executeCommand(uint8_t command, uint8_t* data, uint8_t length) {
       text[length] = '\0';
       
       display.displayClear();
-      display.displayScroll(text, PA_CENTER, PA_SCROLL_LEFT, 50);
+      display.print(text);
       break;
     }
     
