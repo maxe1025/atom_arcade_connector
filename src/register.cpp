@@ -1,6 +1,7 @@
 #include "register.hpp"
 
 #include "controller/controller.h"
+#include "display/display.h"
 
 #include "gdextension_interface.h"
 #include "godot_cpp/core/defs.hpp"
@@ -15,6 +16,7 @@ void initialize(ModuleInitializationLevel p_level)
     }
 
     ClassDB::register_class<Controller>();
+    ClassDB::register_class<Display>();
 }
 
 void uninitialize(ModuleInitializationLevel p_level)
